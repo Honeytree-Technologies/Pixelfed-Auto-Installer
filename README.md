@@ -1,0 +1,1 @@
+# Pixelfed-Auto-Installer
