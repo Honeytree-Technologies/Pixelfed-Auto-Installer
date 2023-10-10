@@ -21,7 +21,7 @@ The Bash file is unencrypted, freely usable, and redistributable (though credit 
 
 - Server or VPS with a minimum of 4GB Ram, 2 vCPU, and 65 GB storage.
 - Ubuntu v20.04 LTS pre-installed.
-- Open ports: 22922 (SSH), 443 and 80
+- Open ports:  443, 80 and SSH (Which you will choose in he script).
 - Machine should have internet access for fetching packages and Docker images.
 - Pre-register the machine's IP with the domain for SSL certificate generation.
 - An email delivery service or SMTP server.
@@ -51,6 +51,7 @@ The Bash file is unencrypted, freely usable, and redistributable (though credit 
     |`db_username` | Database user| &#10006;| &checkmark;|pixelfed |
     |`db_password` | Database Password| &#10006;| &checkmark;|pass_XXXXXXXXX (whereX is Random character) |
     |`db_name` | Database name| &#10006;| &checkmark;|pixel_XXXXXXXXX (whereX is Random character) |
+    |`port` | SSH port | &checkmark;| &#10006;| &#10006;|
 
                                 
 5. Accept terms of service as prompted.
@@ -60,7 +61,7 @@ The Bash file is unencrypted, freely usable, and redistributable (though credit 
 ## Post Deployment
 
 - Access Pixelfed via the provided domain with the given admin credentials.
-- SSH port defaults to 22922.
+- SSH port defaults to new port (which you entered in the script).
 - fail2ban is activated with progressive blocking.
 
 ## Post-Installation Security Recommendations
@@ -89,4 +90,3 @@ It's essential to recognize that the security landscape is dynamic. Stay informe
 This script and deployment guide have been made possible by [Honeytree Technologies, LLC](https://honeytreetech.com).
 
 Please follow [@jeff@honeytree.social](https://honeytree.social/@jeff).
-
