@@ -20,7 +20,7 @@ The Bash file is unencrypted, freely usable, and redistributable (though credit 
 ## Pre-requisites
 
 - Server or VPS with a minimum of 4GB Ram, 2 vCPU, and 65 GB storage.
-- Ubuntu v20.04 LTS pre-installed.
+- Ubuntu v20.04, v22.04 , v23.04 or v23.10 pre-installed.
 - Open ports:  443, 80 and SSH (Which you will choose in the script).
 - Machine should have internet access for fetching packages and Docker images.
 - Point domain name to the server's IP address (necessary for SSL certification).
