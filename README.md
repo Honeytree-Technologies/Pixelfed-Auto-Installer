@@ -64,6 +64,14 @@ The Bash file is unencrypted, freely usable, and redistributable (though credit 
 - SSH port defaults to new port (which you entered in the script).
 - fail2ban is activated with progressive blocking.
 
+### Updating your Pixelfed application
+
+It is recommended that you keep your Pixelfed application up to date with new versions, otherwise things may break. You can use the below commands to update your Pixelfed application.
+
+```bash
+cd ~/pixelfed  &&  git pull origin dev && docker compose -f compose.yml up -d --build
+```
+
 ## Post-Installation Security Recommendations
 
 Once you have successfully deployed Pixelfed using this script, it's crucial to take additional steps to secure and harden your environment. 
