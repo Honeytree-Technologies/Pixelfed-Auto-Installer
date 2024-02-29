@@ -11,7 +11,7 @@ rm env
 cat <<docker_content >>${work_dir}/compose.yml
 version: '3'
 
-# In order to set configuration, please use a .env file in
+# In order to set the configuration, please use a .env file in
 # your compose project directory (the same directory as your
 # docker-compose.yml), and set database options, application
 # name, key, and other settings there.
