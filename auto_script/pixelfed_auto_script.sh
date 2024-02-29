@@ -104,7 +104,7 @@ done
 while true; do
   read -p "Enter Mail port: " mail_port
   if [ -n "${mail_port}" ]; then
-  	break
+    break
   else
     echo "Mail port  cannot be empty. Please enter mail port."
   fi
@@ -124,7 +124,7 @@ done
 while true; do
   read -p "Enter Mail name: " mail_name
   if [ -n "${mail_name}" ]; then
-  	break
+    break
   else
     echo "Mail name cannot be empty. Please enter mail name."
   fi
@@ -134,7 +134,7 @@ done
 while true; do
   read -p "Enter mail username: " mail_username
   if [ -n "${mail_username}" ]; then
-  	break
+    break
   else
     echo "Mail username cannot be empty. Please enter mail username."
   fi
@@ -211,6 +211,7 @@ fi
 
 # install new version of docker
 sudo apt-get update -y
+sudo apt install git
 sudo apt-get install -y ca-certificates curl gnupg lsb-release
 if test -f /usr/share/keyrings/docker-archive-keyring.gpg; then
  sudo rm /usr/share/keyrings/docker-archive-keyring.gpg
@@ -225,15 +226,15 @@ sudo apt  install docker-compose -y
 work_dir=~/pixelfed
 # Remove old work directory if present
 sudo rm -rf ${work_dir}
+git clone https://github.com/pixelfed/pixelfed
 # Make new work directory
-mkdir ${work_dir}
+# mkdir ${work_dir}
 
-# create blank a enviromental files for pixelfed
-touch ${work_dir}/.env.docker
-touch ${work_dir}/docker-compose.yml
+# create blank files for pixelfed
+touch ${work_dir}/.env.compose
+touch ${work_dir}/compose.yml
 
-
-cat <<docker_content >>${work_dir}/docker-compose.yml
+cat <<docker_content >>${work_dir}/compose.yml
 version: '3'
 
 # In order to set configuration, please use a .env file in
@@ -249,14 +250,16 @@ services:
 ## App and Worker
   app:
     # Comment to use dockerhub image
-    image: elestio/pixelfed:latest
+    build: 
+      context: .
+      dockerfile: ./contrib/docker/Dockerfile
     restart: unless-stopped
     env_file:
-      - .env.docker
+      - .env.compose
     volumes:
       - app-storage:/var/www/storage
       - app-bootstrap:/var/www/bootstrap
-      - "./.env.docker:/var/www/.env"
+      - "./.env.compose:/var/www/.env"
     networks:
       - external
       - internal
@@ -267,10 +270,12 @@ services:
       - redis
 
   worker:
-    image: elestio/pixelfed:latest
+    build: 
+      context: .
+      dockerfile: ./contrib/docker/Dockerfile
     restart: unless-stopped
     env_file:
-      - .env.docker
+      - .env.compose
     volumes:
       - app-storage:/var/www/storage
       - app-bootstrap:/var/www/bootstrap
@@ -290,7 +295,7 @@ services:
       - internal
     command: --default-authentication-plugin=mysql_native_password
     env_file:
-      - .env.docker
+      - .env.compose
     volumes:
       - "db-data:/var/lib/mysql"
 
@@ -298,7 +303,7 @@ services:
     image: redis:5-alpine
     restart: unless-stopped
     env_file:
-      - .env.docker
+      - .env.compose
     volumes:
       - "redis-data:/data"
     networks:
@@ -318,8 +323,87 @@ networks:
 
 docker_content
 
-# Add content in the.env.docker file
-cat <<docker_env >> ${work_dir}/.env.docker
+cat <<dockerfile >> ${work_dir}/contrib/docker/Dockerfile
+FROM php:8.1-apache-bullseye
+
+ENV COMPOSER_MEMORY_LIMIT=-1
+ARG DEBIAN_FRONTEND=noninteractive
+WORKDIR /var/www/
+
+COPY --from=composer:2.4.4 /usr/bin/composer /usr/bin/composer
+
+RUN apt-get update \
+  && apt-get upgrade -y \
+  && apt-get install -y --no-install-recommends \
+      locales \
+      locales-all \
+      git \
+      gosu \
+      zip \
+      unzip \
+      libzip-dev \
+      libcurl4-openssl-dev \
+      optipng \
+      pngquant \
+      jpegoptim \
+      gifsicle \
+      libjpeg62-turbo-dev \
+      libpng-dev \
+      libmagickwand-dev \
+      libxpm4 \
+      libxpm-dev \
+      libwebp-dev \
+      ffmpeg \
+      mariadb-client \
+  && locale-gen \
+  && update-locale \
+  && docker-php-source extract \
+  && pecl install imagick \
+  && docker-php-ext-enable imagick \
+  && docker-php-ext-configure gd \
+      --with-freetype \
+      --with-jpeg \
+      --with-webp \
+      --with-xpm \
+  && docker-php-ext-install -j\$(nproc) gd \
+  && pecl install redis \
+  && docker-php-ext-enable redis \
+  && docker-php-ext-install pdo_mysql \
+  && docker-php-ext-configure intl \
+  && docker-php-ext-install -j\$(nproc) intl bcmath zip pcntl exif curl \
+  && a2enmod rewrite remoteip \
+ && {\
+     echo RemoteIPHeader X-Real-IP ;\
+     echo RemoteIPTrustedProxy 10.0.0.0/8 ;\
+     echo RemoteIPTrustedProxy 172.16.0.0/12 ;\
+     echo RemoteIPTrustedProxy 192.168.0.0/16 ;\
+     echo SetEnvIf X-Forwarded-Proto "https" HTTPS=on ;\
+    } > /etc/apache2/conf-available/remoteip.conf \
+ && a2enconf remoteip \
+  && docker-php-source delete \
+  && apt-get autoremove --purge -y \
+  && apt-get clean \
+  && rm -rf /var/cache/apt \
+  && rm -rf /var/lib/apt/lists/
+
+COPY contrib/docker/php.production.ini "\$PHP_INI_DIR/php.ini"
+
+COPY . /var/www/
+RUN cp -r storage storage.skel \
+  && composer install --prefer-dist --no-interaction --no-ansi --optimize-autoloader \
+  && rm -rf html && ln -s public html \
+  && chown -R www-data:www-data /var/www
+
+RUN php artisan horizon:publish
+
+VOLUME /var/www/storage /var/www/bootstrap
+
+CMD ["/var/www/contrib/docker/start.apache.sh"]
+
+dockerfile
+
+# Add content in the .env.compose file
+cat <<docker_env >> ${work_dir}/.env.compose
 ## Crypto
 APP_KEY=
 
@@ -485,18 +569,18 @@ TRUST_PROXIES="*"
 #PASSPORT_PRIVATE_KEY=
 #PASSPORT_PUBLIC_KEY=
 docker_env
- docker compose -f ${work_dir}/docker-compose.yml up -d
- docker compose -f ${work_dir}/docker-compose.yml exec app php artisan key:generate
- cat ${work_dir}/.env.docker | grep "APP_KEY"
- docker compose -f ${work_dir}/docker-compose.yml restart app
- docker compose -f ${work_dir}/docker-compose.yml exec app php artisan config:cache
- docker compose -f ${work_dir}/docker-compose.yml exec app php artisan migrate
- docker compose -f ${work_dir}/docker-compose.yml restart app
- docker compose -f ${work_dir}/docker-compose.yml exec app php artisan user:create
+ docker compose -f ${work_dir}/compose.yml up -d
+ docker compose -f ${work_dir}/compose.yml exec app php artisan key:generate
+ cat ${work_dir}/.env.compose | grep "APP_KEY"
+ docker compose -f ${work_dir}/compose.yml restart app
+ docker compose -f ${work_dir}/compose.yml exec app php artisan config:cache
+ docker compose -f ${work_dir}/compose.yml exec app php artisan migrate
+ docker compose -f ${work_dir}/compose.yml restart app
+ docker compose -f ${work_dir}/compose.yml exec app php artisan user:create
 
 
 
- Setting up the nginx 
+# Setting up the nginx 
 
 if nginx -v &>/dev/null; then
   echo "Nginx is already install installed"
@@ -512,32 +596,32 @@ touch /etc/nginx/sites-available/pixelfed
 cat <<nginx_content >>/etc/nginx/sites-available/pixelfed
  server {
 
-	server_name ${domain_name};
+  server_name ${domain_name};
 
-	proxy_set_header Host \$host;
+  proxy_set_header Host \$host;
 
-	proxy_set_header X-Real-IP \$remote_addr;
+  proxy_set_header X-Real-IP \$remote_addr;
 
-	proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
 
-	proxy_set_header X-Forwarded-Proto \$scheme;
+  proxy_set_header X-Forwarded-Proto \$scheme;
 
-	proxy_set_header Proxy "";
+  proxy_set_header Proxy "";
 
-	proxy_http_version 1.1;
+  proxy_http_version 1.1;
 
-	proxy_set_header Upgrade \$http_upgrade;
+  proxy_set_header Upgrade \$http_upgrade;
 
-	proxy_set_header Connection "upgrade";
+  proxy_set_header Connection "upgrade";
 
 
 
-	     location / {
-	       proxy_set_header Host \$host;
-	       proxy_set_header X-Real-IP \$remote_addr;
-	       proxy_set_header X-Forwarded-For \$remote_addr;
-	       proxy_pass  http://localhost:8080;
-	     }
+       location / {
+         proxy_set_header Host \$host;
+         proxy_set_header X-Real-IP \$remote_addr;
+         proxy_set_header X-Forwarded-For \$remote_addr;
+         proxy_pass  http://localhost:8080;
+       }
 
 }
 
@@ -552,7 +636,7 @@ sudo systemctl restart nginx
 
 # Config ufw firewall to allow Nginx ports. Skip if your server doesn't have ufw.
 sudo ufw allow 'Nginx Full'
- docker compose -f ${work_dir}/docker-compose.yml restart app
+ docker compose -f ${work_dir}/compose.yml restart app
 
 # Secure Mastodon with Let's Encrypt SSL
 sudo apt-get install -y certbot python3-certbot-nginx
@@ -561,8 +645,8 @@ sudo apt-get install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d ${domain_name}
 
 systemctl restart nginx
-docker compose -f ${work_dir}/docker-compose.yml down
-docker compose -f ${work_dir}/docker-compose.yml up -d
+docker compose -f ${work_dir}/compose.yml down
+docker compose -f ${work_dir}/compose.yml up -d
 
 
 # change ssh port
@@ -1731,10 +1815,10 @@ banaction = %(banaction_allports)s
 fail2ban_ban
 
 
-# Restart the fail2ban service.
+# Enable Restart the fail2ban service.
+sudo systemctl enable fail2ban
 sudo systemctl restart fail2ban
 echo "Congratulations your setup is done"
 echo "Now you can check your website on https://${domain_name}"
 echo "Database user:  ${db_username}  ,  password: ${db_password}  and database name ${db_name}"
 echo "Now SSH port is ${ssh_port}"
-
