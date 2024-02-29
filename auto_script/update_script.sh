@@ -26,14 +26,14 @@ cat <<startup_warning
 ########################################################################
 startup_warning
 
-
 WIPE_DATA=""
-  read -p "Do you want to wipe old application data? (y/N): " WIPE_DATA
+read -p "Do you want to wipe old application data?. (Type 'yes' to confirm, or 'no' to cancel): " WIPE_DATA
 
-  if [[ "${WIPE_DATA}" =~ ^[Yy] ]]; then
+if [[ "${WIPE_DATA}" == "yes" ]]; then
    sudo docker rm -f $( sudo docker ps -a -q)
    sudo docker volume rm $(sudo docker volume ls -q)
-  fi
+fi
+
 
 sudo apt-get update -y
 sudo apt install git -y
