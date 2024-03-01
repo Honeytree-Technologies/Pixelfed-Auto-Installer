@@ -1,4 +1,40 @@
 #!/bin/bash
+
+# Display the script header , providing basic information about the script.
+cat <<start_content
+########################################################################
+#                                                                      #
+#                             PixelFed Updater                         #
+#                                                                      #
+#                  Created by Honeytree Technologies, LLC              #
+#                            www.honeytreetech.com                     #
+#                                                                      #
+#                      Mastodon: honeytree.social                      #
+#                      Email : info@honeytreetech.com                  #
+#                                                                      #
+########################################################################
+start_content
+
+sleep 3
+
+cat <<startup_warning
+########################################################################
+#####  THIS IS IMPORTANT, PLEASE READ CAREFULLY BEFORE SELECTING   #####
+#####                                                              #####
+#####  This will only update from Elastio to Github version.       #####
+#####                                                              #####
+########################################################################
+startup_warning
+
+WIPE_DATA=""
+read -p "Do you want to wipe old application data?. (Type 'yes' to confirm, or 'no' to cancel): " WIPE_DATA
+
+if [[ "${WIPE_DATA}" == "yes" ]]; then
+   sudo docker rm -f $( sudo docker ps -a -q)
+   sudo docker volume rm $(sudo docker volume ls -q)
+fi
+
+
 sudo apt-get update -y
 sudo apt install git -y
 work_dir=~/pixelfed

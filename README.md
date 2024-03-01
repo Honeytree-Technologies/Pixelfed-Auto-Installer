@@ -66,11 +66,15 @@ The Bash file is unencrypted, freely usable, and redistributable (though credit 
 
 ### Updating your Pixelfed application
 
-It is recommended that you keep your Pixelfed application up to date with new versions, otherwise things may break. You can use the below commands to update your Pixelfed application.
+- It is recommended that you keep your Pixelfed application up to date with new versions, otherwise things may break. You can use the below commands to update your Pixelfed application.
 
 ```bash
 cd ~/pixelfed  &&  git pull origin dev && docker compose -f compose.yml up -d --build
 ```
+- If you have old automation which is using Elestio/pixelFed:latest docker image. Run below command to update the elestio docker image with github source code
+```bash
+curl -lO https://code.honeytreetech.com/fediverse/pixelfed/updater/updater.sh && sudo chmod +x updater.sh && ./updater.sh
+ ```
 
 ## Post-Installation Security Recommendations
 
